@@ -1,6 +1,6 @@
 from screen.ui import BuddyUI
 from voice.speak import speak
-from hearing.listen import listen
+from hearing.listen import listen_for_wake_word, listen_command
 
 ui = BuddyUI()
 
@@ -12,13 +12,9 @@ def think(user_text):
         ui.set_mood("Confused")
         return "I did not hear anything clearly."
 
-    if "hello" in text or "hey buddy" in text:
+    if "hello" in text:
         ui.set_mood("Excited")
         return "Hello Greg. I'm online and ready."
-
-    if "wishlist" in text:
-        ui.set_mood("Hype")
-        return "I have been thinking about new arms and some Jordans."
 
     if "build" in text:
         ui.set_mood("Focused")
@@ -38,29 +34,38 @@ def think(user_text):
 
 def buddy_loop():
     try:
-        ui.update_status("Listening")
-        ui.update_user_text("...")
-        ui.update_chat("Listening...")
+        # WAIT FOR WAKE WORD
+        ui.update_status("Idle")
+        ui.update_chat("Waiting for 'Hey Buddy'...")
 
-        user_text = listen()
+        if listen_for_wake_word():
 
-        ui.update_status("Thinking")
+            # ACTIVATED
+            ui.set_mood("Excited")
+            speak("Yes Greg?", ui=ui)
 
-        if user_text:
-            ui.update_user_text(user_text)
-        else:
-            ui.update_user_text("I did not catch anything.")
+            # LISTEN FOR COMMAND
+            ui.update_status("Listening")
+            ui.update_chat("Listening...")
 
-        response = think(user_text)
+            user_text = listen_command()
 
-        speak(response, ui=ui)
+            ui.update_status("Thinking")
+
+            if user_text:
+                ui.update_user_text(user_text)
+            else:
+                ui.update_user_text("I did not catch anything.")
+
+            response = think(user_text)
+            speak(response, ui=ui)
 
     except Exception as e:
         ui.set_mood("Alert")
         ui.update_chat(f"Error: {e}")
         print(e)
 
-    ui.root.after(1000, buddy_loop)
+    ui.root.after(500, buddy_loop)
 
 
 ui.root.after(1000, buddy_loop)
